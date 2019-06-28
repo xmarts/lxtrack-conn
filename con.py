@@ -6,8 +6,8 @@ import pymysql
 from pprint import pprint
 
 #conexion odoo
-url = 'https://xmarts-embotelladora-el-jarocho-19-06-450101.dev.odoo.com'
-db = 'xmarts-embotelladora-el-jarocho-19-06-450101'
+url = 'https://corporativo-humano-de-alto-rendimiento-tracking-461164.dev.odoo.com'
+db = 'corporativo-humano-de-alto-rendimiento-tracking-461164'
 username = 'admin'
 password = 'admin'
 common = xmlrpc.client.ServerProxy('{}/xmlrpc/2/common'.format(url))
@@ -33,16 +33,23 @@ class Products():
         partner_records = models.execute_kw(db, uid, password, model_name, 'read', [partner_ids])
         return partner_records
 
+class Pricelist():
+    def read(self):
+        # Read Pricelist
+        model_name = 'product.pricelist';
+        ids = models.execute_kw(db, uid, password, model_name , 'search',
+                                        [[['active', '=', 'true']]])  # ,{'limit': 10})
+        records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
+        return records
+
 class ProductPricelist():
     def read(self):
         # Read ProductsPricelist
-        model_name = 'product.pricelist'
-        partner_ids = models.execute_kw(db, uid, password, 'product.pricelist', 'search',
-                                        [[['rental', '=', False]]])  # ,{'limit': 10})
-        #ids = models.execute_kw(db, uid, password, 'product.template', 'search',
-        #                                [[['rental', '=', False]]]) #,{'limit': 10})
-        #records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
-        #return records
+        model_name = 'product.pricelist.item';
+        ids = models.execute_kw(db, uid, password, model_name , 'search',
+                                        [[['base', '=', 'list_price']]])  # ,{'limit': 10})
+        records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
+        return records
 
 class Partners():
     def read(self):
@@ -75,7 +82,7 @@ class Partners():
 class lx_price():
     def read(self):
         # Read customers
-        model_name = 'lx_price'
+        model_name = 'product_pricelist_item'
         partner_ids = models.execute_kw(db, uid, password, model_name, 'search', [[['customer', '=', True]]])
         partner_records = models.execute_kw(db, uid, password, model_name, 'read', [partner_ids])
         return partner_records
@@ -99,11 +106,6 @@ class lxtrack_cat_producto():
                     product['create_date'], product['write_date'], product['id'])
 
             cursor.execute(query,args)
-
-        #    if cursor.lastrowid:
-        #        print('last insert id', cursor.lastrowid)
-        #    else:
-        #        print('last insert id not found')
             myconn.commit()
 
 
@@ -114,3 +116,42 @@ class lxtrack_cat_producto():
         finally:
             cursor.close()
 
+
+class lxtrack_lista_precios():
+    def insert(self,data):
+        cursor = myconn.cursor()
+        try:
+            query = "INSERT INTO lxtrack_lista_precios " \
+                        " (id, descripcion, active, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor) " \
+                        " VALUES(%s, %s, '1', %s, %s, 0, 0) " \
+                        " ON DUPLICATE KEY UPDATE  descripcion = %s  , mod_date = %s "
+            args = (data['id'],data['name'],data['create_date'],data['write_date'],data['name'],data['write_date'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack_cat_producto %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
+
+
+class lxtrack_precios():
+    def insert(self,data):
+        cursor = myconn.cursor()
+        try:
+            query = "INSERT INTO LX_JAROCHITO.lxtrack_precios " \
+                    " (id, id_lista_precios, id_cat_producto, precio_unitario, active, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor) " \
+                    " VALUES(%s, %s, 19, %s, '1', %s, %s, 0, 0) " \
+                    " ON DUPLICATE KEY UPDATE id_lista_precios  = %s  , precio_unitario = %s "
+            args = (data['id'],data['pricelist_id'][0],data['fixed_price'],data['create_date'],data['write_date'],data['pricelist_id'][0],data['fixed_price'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack_cat_producto %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
