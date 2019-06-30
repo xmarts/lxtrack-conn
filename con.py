@@ -51,42 +51,27 @@ class ProductPricelist():
         records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
         return records
 
+class RouteOrder():
+    def read(self,status):
+        # read route.order
+        model_name = 'route.order'
+        ids = models.execute_kw(db, uid, password, model_name , 'search',
+                                        [[['state', '=', 0]]])  # ,{'limit': 10})
+        records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
+        return records
+
 class Partners():
-    def read(self):
+    def read(self,id):
         # Read customers
         model_name = 'res.partner'
         partner_ids = models.execute_kw(db, uid, password, model_name, 'search',
-                                        [[['customer', '=', True]]]) #,{'limit': 10})
+                                        [[['id', '=', id]]]) #,{'limit': 10})
         partner_records = models.execute_kw(db, uid, password, model_name, 'read', [partner_ids])
         return partner_records
 
-    def create(self):
-        # Create customer
-        model_name = 'res.partner'
-        vals = {
-            'name': "New Customer",
-        }
-        new_id = models.execute_kw(db, uid, password, model_name, 'create', [vals])
-        return new_id
-
-    def update(self, id):
-        # Update customer
-        model_name = 'res.partner'
-        models.execute_kw(db, uid, password, model_name, 'write', [[id], {
-            'name': "Newer partner"
-        }])
 
 
-
-
-class lx_price():
-    def read(self):
-        # Read customers
-        model_name = 'product_pricelist_item'
-        partner_ids = models.execute_kw(db, uid, password, model_name, 'search', [[['customer', '=', True]]])
-        partner_records = models.execute_kw(db, uid, password, model_name, 'read', [partner_ids])
-        return partner_records
-
+#Clases para mysql
 
 class lxtrack_cat_producto():
     def insert(self,product):
@@ -151,6 +136,56 @@ class lxtrack_precios():
 
         except pymysql.Error as e:
             print("Error lxtrack_cat_producto %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
+
+
+class lxtrack_cliente():
+    def insert(self,data):
+        cursor = myconn.cursor()
+        try:
+            query = "INSERT INTO lxtrack_cliente " \
+                    "(id, id_local, razon_social, nombre_comercial, RFC, askticket, credito, limite_credito, detallesaldo, montodebe, codigo_cliente,"\
+                    "id_lista_precios, id_categoria_sector, autorizado, capture, active, id_inactive_reason, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor, id_sesion_app) "\
+                    "VALUES(%s, %s, %s, %s, %s, '0', %s, %s, NULL, 0, %s " \
+                    ", 1, 1, '1', 'P', '1', NULL, '2018-05-11 13:56:13.000', '2018-07-04 14:47:22.000', 0, 0, NULL) " \
+                    " ON DUPLICATE KEY UPDATE razon_social  = %s, nombre_comercial = %s, RFC = %s, credito = %s, limite_credito = %s "
+            args = (data['id'],data['id'],data['name'],data['name'],data['vat'],data['credit'],data['credit_limit'],data['id'],
+                    data['name'],data['name'],data['vat'],data['credit'],data['credit_limit'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack_cat_producto %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
+
+
+
+class lxtrack_cliente_direccion():
+    def insert(self,data,cliente):
+        cursor = myconn.cursor()
+        try:
+            query = "INSERT INTO LX_JAROCHITO.lxtrack_cliente_direccion "\
+                    "(id, id_cliente, clave_estado, ciudad, colonia, domicilio, "\
+                    "cp, lat, lon, radio, nombre, contacto, tel, email, tipo, ruta, id_cluster, active, id_inactive_reason, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor) "\
+                    " VALUES(%s, %s, %s, %s, %s, %s, "\
+                    " %s, %s, %s, 50, %s, 'cliente', %s, %s, 'M', 0, NULL, '1', NULL, %s, %s, 0, 0) " \
+                    " ON DUPLICATE KEY UPDATE id_cliente = %s, clave_estado = %s, ciudad = %s, colonia = %s , domicilio = %s " \
+                    ", cp = %s , lat = %s , lon = %s , nombre = %s , contacto = %s "# , tel = %s , email = %s , mod_date = %s ) "
+            args = (data['id'],data['id'],data['state_id'][1],data['l10n_mx_edi_locality'],data['l10n_mx_edi_colony'],data['street_name']+' '+str(data['street_number']),
+                    str(data['zip']),data['partner_latitude'],data['partner_longitude'],data['name'],data['phone'],data['email'],data['create_date'],data['__last_update'],
+                    data['id'],data['state_id'][1],data['l10n_mx_edi_locality'],data['l10n_mx_edi_colony'],data['street_name']+' '+str(data['street_number'])
+                    ,str(data['zip']) ,data['partner_latitude'],data['partner_longitude'] ,data['name'] ,data['name'] , data['phone'] )#,data['email'],data['__last_update'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack error  %d: %s" % (e.args[0], e.args[1]))
             return False
 
         finally:
