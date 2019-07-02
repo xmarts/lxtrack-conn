@@ -59,6 +59,19 @@ class RouteOrder():
                                         [[['state', '=', 0]]])  # ,{'limit': 10})
         records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
         return records
+    def update(self, id, data):
+        # Update customer
+        model_name = 'route.order'
+        models.execute_kw(db, uid, password, model_name, 'write', [[id], data ])
+        error = models
+    def create(self):
+        # Create customer
+        model_name = 'route.order'
+        vals = {
+            'name': "New Customer",
+        }
+        new_id = models.execute_kw(db, uid, password, model_name, 'create', [vals])
+        return new_id
 
 class Partners():
     def read(self,id):
@@ -68,6 +81,15 @@ class Partners():
                                         [[['id', '=', id]]]) #,{'limit': 10})
         partner_records = models.execute_kw(db, uid, password, model_name, 'read', [partner_ids])
         return partner_records
+
+class Employee():
+    def read(self, id ):
+        # Read customers
+        model_name = 'hr.employee'
+        ids = models.execute_kw(db, uid, password, model_name, 'search',
+                                        [[['id', '=', id]]]) #,{'limit': 10})
+        records = models.execute_kw(db, uid, password, model_name, 'read', [ids])
+        return records
 
 
 
@@ -176,11 +198,65 @@ class lxtrack_cliente_direccion():
                     " VALUES(%s, %s, %s, %s, %s, %s, "\
                     " %s, %s, %s, 50, %s, 'cliente', %s, %s, 'M', 0, NULL, '1', NULL, %s, %s, 0, 0) " \
                     " ON DUPLICATE KEY UPDATE id_cliente = %s, clave_estado = %s, ciudad = %s, colonia = %s , domicilio = %s " \
-                    ", cp = %s , lat = %s , lon = %s , nombre = %s , contacto = %s "# , tel = %s , email = %s , mod_date = %s ) "
+                    ", cp = %s , lat = %s , lon = %s , nombre = %s , contacto = %s , tel = %s , email = %s "#, mod_date = %s ) "
             args = (data['id'],data['id'],data['state_id'][1],data['l10n_mx_edi_locality'],data['l10n_mx_edi_colony'],data['street_name']+' '+str(data['street_number']),
-                    str(data['zip']),data['partner_latitude'],data['partner_longitude'],data['name'],data['phone'],data['email'],data['create_date'],data['__last_update'],
+                    str(data['zip']),data['partner_latitude'],data['partner_longitude'],data['name'],str(data['phone']),str(data['email']),data['create_date'],data['__last_update'],
                     data['id'],data['state_id'][1],data['l10n_mx_edi_locality'],data['l10n_mx_edi_colony'],data['street_name']+' '+str(data['street_number'])
-                    ,str(data['zip']) ,data['partner_latitude'],data['partner_longitude'] ,data['name'] ,data['name'] , data['phone'] )#,data['email'],data['__last_update'])
+                    ,str(data['zip']) ,data['partner_latitude'],data['partner_longitude'] ,data['name'] ,data['name'] , str(data['phone']) , data['email'] ) #),data['__last_update'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack error  %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
+
+class lxtrack_usuario():
+    def insert(self, data):
+        cursor = myconn.cursor()
+        try:
+            query = "INSERT INTO LX_JAROCHITO.lxtrack_usuario "\
+                    "(id, nick, nombre, email, password, clave_usuario_rol, id_supervisor, active, id_inactive_reason, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor) "\
+                    " VALUES( %s , %s, %s , %s, %s, 'VE', 3, '1', NULL, %s, %s, 0, 2) " \
+                    " ON DUPLICATE KEY UPDATE nick = %s, nombre = %s, email= %s, password = %s , mod_date = %s "
+            args = (data['id'],data['identification_id'],data['name'],str(data['work_email']),data['password'],data['create_date'],data['__last_update']
+                    , data['identification_id'],data['name'],str(data['work_email']),data['password'],data['__last_update'])
+            cursor.execute(query,args)
+            myconn.commit()
+
+        except pymysql.Error as e:
+            print("Error lxtrack error  %d: %s" % (e.args[0], e.args[1]))
+            return False
+
+        finally:
+            cursor.close()
+
+class lxtrack_orden():
+    def insert(self, data):
+        cursor = myconn.cursor()
+        try:
+            query = "SHOW TABLE STATUS LIKE 'lxtrack_orden' "
+            cursor.execute(query)
+            next  = cursor.fetchone()
+            nextid = next['Auto_increment']
+
+            #insertar orden
+            query = "INSERT INTO lxtrack_orden " \
+                    "(id, id_odoo, id_local, id_cliente, id_cliente_direccion, comentarios, clave_orden_prioridad, id_encargado, id_supervisor, "\
+                    " clave_orden_estatus, id_formulario, tipo_orden, active, id_inactive_reason, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor, id_sesion_app, creator, creation_utc_millis) " \
+                    " VALUES(%s, %s, %s, %s, %s, %s, 'N', %s,'3', " \
+                    " '1', 1, %s , 1, NULL , %s, %s , 1, 1, NULL, 'ODOO', '') "
+                    #" ON DUPLICATE KEY UPDATE nick = %s, nombre = %s, email= %s, password = %s , mod_date = %s "
+            args = (nextid,data['id'],data['id'],data['partner_id'][0], data['partner_shipping_id'][0],str(data['comentary']),data['manage_id'][0]
+                    , data['type'],data['create_date'],data['__last_update'])
+            cursor.execute(query,args)
+            #insertar orden agenda
+            query = "INSERT INTO lxtrack_orden_agenda " \
+                    " (id, id_orden, fecha, hora, active, id_inactive_reason, insert_date, mod_date, id_usuario_creator, id_usuario_last_editor) " \
+                    " VALUES( %s, %s, %s, %s, '1', NULL, %s, %s, 1, 1) "
+            args = (nextid, nextid, data['date_order'][:10], data['date_order'][11:],data['create_date'],data['__last_update'])
             cursor.execute(query,args)
             myconn.commit()
 
