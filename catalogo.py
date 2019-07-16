@@ -13,6 +13,7 @@ def main():
     productcon = Products()
     products = productcon.read()
     cat_producto = lxtrack_cat_producto()
+    cat_producto.inactive()
     for product in products:
         #inserta productos
         pprint(product['name'])
